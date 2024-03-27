@@ -41,9 +41,6 @@ struct s_long* to_hexa(const char* str)
     r->len = (len / 2) + (len % 2);
     r->a = calloc(r->len, sizeof(unsigned char));
 
-    printf("%zu\n", len);
-    printf("%zu\n", r->len);
-
     size_t k = len%2;
 
     i = 0;
@@ -54,15 +51,15 @@ struct s_long* to_hexa(const char* str)
         {
             if('0' <= str[i] && str[i] <= '9')
             {
-                r->a[k/2] += (str[i] - '0') << (4 * (k + 1) % 2);
+                r->a[k/2] += (str[i] - '0') << (4 * ((k + 1) % 2));
             }
             else if('a' <= str[i] && str[i] <= 'f')
             {
-                r->a[k/2] += (str[i] - 'a' + 10) << (4 * (k + 1) % 2);
+                r->a[k/2] += (str[i] - 'a' + 0xa) << (4 * ((k + 1) % 2));
             }
             else if('A' <= str[i] && str[i] <= 'F')
             {
-                r->a[k/2] += (str[i] - 'A' + 10) << (4 * (k + 1) % 2);
+                r->a[k/2] += (str[i] - 'A' + 0xa) << (4 * ((k + 1) % 2));
             }
             else 
             {

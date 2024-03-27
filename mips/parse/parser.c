@@ -125,7 +125,19 @@ void setup(struct assembler *file)
     if(file == NULL || file->data == NULL)
         errx(1, "setup: file or data NULL");
 
-    if(file->endian == LENDIAN)
+
+    unsigned char t[] = {0x41, 0x0, 0x2, 0x3c};
+    printf("test:");
+    for(int i = 0; i < 4; i++)
+        printf(" %hhx", file->data[i]);
+    printf(" => %x \n", ((unsigned int *)file->data)[0]);
+    printf("t2: %x\n", ((unsigned int *)file->data)[0] & 0xff);
+    printf("test:");
+    for(int i = 0; i < 4; i++)
+        printf(" %hhx", t[i]);
+    printf(" => %x \n", ((unsigned int *)t)[0]);
+    printf("t2: %x\n", ((unsigned int *)t)[0] & 0xff);
+    if(file->endian == BENDIAN)
     {
         unsigned char *data = file->data;
 
@@ -176,36 +188,12 @@ uint get3(uint op, int index)
 }
 
 static const char* regis[] = {
-    "zero",
-    "at",
-    "v0",
-    "v1",
-    "a0",
-    "a1",
-    "a2",
-    "a3",
-    "t0",
-    "t1",
-    "t2",
-    "t3",
-    "t4",
-    "t5",
-    "t6",
-    "t7",
-    "s0",
-    "s1",
-    "s2",
-    "s3",
-    "s4",
-    "s5",
-    "s6",
-    "s7",
-    "k0",
-    "k1",
-    "gp",
-    "sp",
-    "fp",
-    "ra"
+    "zero", "at", "v0", "v1",
+    "a0", "a1", "a2", "a3",
+    "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
+    "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
+    "k0", "k1", "gp", "sp",
+    "fp", "ra"
 };
 
 static
