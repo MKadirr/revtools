@@ -9,17 +9,57 @@
 static const char* strregis(uint n);
 
 static
-int nitoggle = 0;
+int ni_toggle = 0;
+
+static 
+void print_iname(const char* ins)
+{
+    printf("%-10s ", ins);
+}
+
+static
+void print_r1(uint r1)
+{
+    printf("%s", strregis(r1));
+}
+static
+void print_r2(uint r1, uint r2)
+{
+    printf("%s, %s", strregis(r1), strregis(r2));
+}
+static
+void print_r3(uint r1, uint r2, uint r3)
+{
+    printf("%s, %s, %s", strregis(r1), strregis(r2), strregis(r3));
+}
+
+static
+void print_imm(uint imm, int prev)
+{
+    if(prev) printf(", ");
+
+    if(imm & 0b1000000000000000)
+    {
+        printf("-");
+        imm = (~imm + 1) & 0b111111111111111;
+    }
+    printf("0x%x", imm);
+}
+
+static
+void print_end(const char* end)
+{
+    printf(" %s", end);
+}
 
 static
 void print0i(const char* ins,
              uint imm,
              const char *end)
 {
-    printf("%-10s 0x%x %s", ins, 
-                        imm, 
-                        end);
-
+    print_iname(ins);
+    print_imm(imm, 0);
+    print_end(end);
 }
 
 static
@@ -27,10 +67,9 @@ void print1(const char* ins,
              uint rs,
              const char *end)
 {
-    printf("%-10s %s %s", ins, 
-                        strregis(rs), 
-                        end);
-
+    print_iname(ins);
+    print_r1(rs);
+    print_end(end);
 }
 
 static
@@ -39,11 +78,11 @@ void print1i(const char* ins,
             uint imm,
             const char *end) 
 {
+    print_iname(ins);
+    print_r1(rs);
+    print_imm(imm, 1);
+    print_end(end);
 
-    printf("%-10s %s,0x%x %s", ins, 
-                           strregis(rs),
-                           imm,
-                           end);
 }
 static
 void printoffb(const char* ins,
@@ -52,12 +91,11 @@ void printoffb(const char* ins,
         uint base,
         const char *end)
 {
-    printf("%-10s %s, 0x%x(%s) %s",
-                        ins,
-                        strregis(rt),
-                        offset,
-                        strregis(base),
-                        end);
+    print_iname(ins);
+    print_r1(rt);
+    print_imm(offset, 1);
+    printf("(%s)", strregis(base));
+    print_end(end);
 }
 
 static
@@ -66,11 +104,9 @@ void print2(const char* ins,
             uint rs, 
             const char *end) 
 {
-
-    printf("%-10s %s,%s %s", ins, 
-                           strregis(rd), 
-                           strregis(rs), 
-                           end);
+    print_iname(ins);
+    print_r2(rd, rs);
+    print_end(end);
 }
 
 static
@@ -80,12 +116,9 @@ void print2cc(const char* ins,
             uint cc,
             const char *end) 
 {
-
-    printf("%-10s %s,%s,%u %s", ins, 
-                           strregis(rd), 
-                           strregis(rs),
-                           cc,
-                           end);
+    print_iname(ins);
+    printf("%s, %s, %u", strregis(rd), strregis(rs), cc);
+    print_end(end);
 }
 
 
@@ -96,12 +129,10 @@ void print2i(const char* ins,
             uint imm,
             const char *end) 
 {
-
-    printf("%-10s %s,%s,0x%x %s", ins, 
-                           strregis(rd), 
-                           strregis(rs),
-                           imm,
-                           end);
+    print_iname(ins);
+    print_r2(rd, rs);
+    print_imm(imm, 1);
+    print_end(end);
 }
 
 
@@ -112,11 +143,9 @@ void print3(const char *ins,
             uint rt,
             const char *end)
 {
-    printf("%-10s %s,%s,%s %s", ins,
-                              strregis(rd), 
-                              strregis(rs), 
-                              strregis(rt), 
-                              end);
+    print_iname(ins);
+    print_r3(rd, rs, rt);
+    print_end(end);
 }
 
 static
@@ -126,17 +155,6 @@ void setup(struct assembler *file)
         errx(1, "setup: file or data NULL");
 
 
-    unsigned char t[] = {0x41, 0x0, 0x2, 0x3c};
-    printf("test:");
-    for(int i = 0; i < 4; i++)
-        printf(" %hhx", file->data[i]);
-    printf(" => %x \n", ((unsigned int *)file->data)[0]);
-    printf("t2: %x\n", ((unsigned int *)file->data)[0] & 0xff);
-    printf("test:");
-    for(int i = 0; i < 4; i++)
-        printf(" %hhx", t[i]);
-    printf(" => %x \n", ((unsigned int *)t)[0]);
-    printf("t2: %x\n", ((unsigned int *)t)[0] & 0xff);
     if(file->endian == BENDIAN)
     {
         unsigned char *data = file->data;
@@ -444,7 +462,15 @@ void special(uint op)
             rs = get5(op, 21);
             rt = get5(op, 16);
             rd = get5(op, 11);
-            print3("addu", rd, rs, rt, "");
+            if(rt == 0)
+            {
+                if(rs == 0)
+                    print1("clear", rd, "");
+                else
+                    print2("move", rd, rs, "");
+            }
+            else
+                print3("addu", rd, rs, rt, "");
             return;
 
         case 0b011010: //div signed 32
@@ -807,11 +833,14 @@ void parse(struct assembler *file)
                break;
 
             case 0b001001: // ADDIU
-               rs = get5(op, 21);
-               rt = get5(op, 16);
-               imm = getimm(op);
-               print2i("addiu", rt, rs, imm, "");
-               break;
+                rs = get5(op, 21);
+                rt = get5(op, 16);
+                imm = getimm(op);
+                if(rs == 0)
+                    print1i("li", rt, imm, "");
+                else
+                    print2i("addiu", rt, rs, imm, "");
+                break;
         
             case 0b001100: // ANDI
                rs = get5(op, 21);
@@ -1028,7 +1057,10 @@ void parse(struct assembler *file)
                 rs = get5(op, 21);
                 rt = get5(op, 16);
                 imm = getimm(op);
-                print2i("beq", rs, rt, imm, "");
+                if(rs == rt)
+                    print0i("b", imm, "");
+                else
+                    print2i("beq", rs, rt, imm, "");
                 break;
 
             case 0b010100: // BEQL
